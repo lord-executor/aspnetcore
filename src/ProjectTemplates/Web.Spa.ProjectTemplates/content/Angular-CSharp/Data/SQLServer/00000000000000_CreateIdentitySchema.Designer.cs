@@ -219,6 +219,8 @@ namespace Company.WebApplication1.Data.Migrations
 
                     b.HasKey("Key");
 
+                    b.HasIndex("ConsumedTime");
+
                     b.HasIndex("Expiration");
 
                     b.HasIndex("SubjectId", "ClientId", "Type");
