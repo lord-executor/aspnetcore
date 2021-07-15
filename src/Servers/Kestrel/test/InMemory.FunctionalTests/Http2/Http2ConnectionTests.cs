@@ -305,8 +305,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Tests
         public async Task StreamPool_MultipleStreamsInSequence_PooledStreamReused()
         {
             TaskCompletionSource appDelegateTcs = null;
-            object persistetedState = null;
-            int requestCount = 0;
+            object persistedState = null;
+            var requestCount = 0;
 
             await InitializeConnectionAsync(async context =>
             {
@@ -314,7 +314,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Tests
                 var persistentStateCollection = context.Features.Get<IPersistentStateFeature>().State;
                 if (persistentStateCollection.TryGetValue("Counter", out var value))
                 {
-                    persistetedState = value;
+                    persistedState = value;
                 }
                 persistentStateCollection["Counter"] = requestCount;
                 await appDelegateTcs.Task;
@@ -340,7 +340,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Tests
             Assert.True(_connection.StreamPool.TryPeek(out var pooledStream));
             Assert.Equal(stream, pooledStream);
 
-            Assert.Null(persistetedState);
+            // First request has no persisted state
+            Assert.Null(persistedState);
 
             appDelegateTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             await StartStreamAsync(3, _browserRequestHeaders, endStream: true);
@@ -360,7 +361,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Tests
             Assert.True(_connection.StreamPool.TryPeek(out pooledStream));
             Assert.Equal(stream, pooledStream);
 
-            Assert.Equal(1, (int)persistetedState);
+            // State persisted on first request was available on the second request
+            Assert.Equal(1, (int)persistedState);
 
             await StopConnectionAsync(expectedLastStreamId: 3, ignoreNonGoAwayFrames: false);
 

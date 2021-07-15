@@ -2056,6 +2056,68 @@ namespace Microsoft.AspNetCore.Server.Kestrel.InMemory.FunctionalTests
         }
 
         [Fact]
+        public async Task PersistentStateBetweenRequests()
+        {
+            var testContext = new TestServiceContext(LoggerFactory);
+            object persistedState = null;
+            var requestCount = 0;
+
+            await using (var server = new TestServer(context =>
+            {
+                requestCount++;
+                var persistentStateCollection = context.Features.Get<IPersistentStateFeature>().State;
+                if (persistentStateCollection.TryGetValue("Counter", out var value))
+                {
+                    persistedState = value;
+                }
+                persistentStateCollection["Counter"] = requestCount;
+                return Task.CompletedTask;
+            }, testContext))
+            {
+                using (var connection = server.CreateConnection())
+                {
+                    // First request
+                    await connection.Send(
+                        "GET / HTTP/1.1",
+                        "Host:",
+                        "Content-Type: application/test",
+                        "X-CustomHeader: customvalue",
+                        "",
+                        "");
+                    await connection.Receive(
+                        "HTTP/1.1 200 OK",
+                        "Content-Length: 0",
+                        $"Date: {testContext.DateHeaderValue}",
+                        "",
+                        "");
+                    var firstRequestState = persistedState;
+
+                    // Second request
+                    await connection.Send(
+                        "GET / HTTP/1.1",
+                        "Host:",
+                        "Content-Type: application/test",
+                        "X-CustomHeader: customvalue",
+                        "",
+                        "");
+                    await connection.Receive(
+                        "HTTP/1.1 200 OK",
+                        "Content-Length: 0",
+                        $"Date: {testContext.DateHeaderValue}",
+                        "",
+                        "");
+                    var secondRequestState = persistedState;
+
+                    // First request has no persisted state
+                    Assert.Null(firstRequestState);
+
+                    // State persisted on first request was available on the second request
+                    Assert.Equal(1, secondRequestState);
+                }
+            }
+        }
+
+        [Fact]
         public async Task Latin1HeaderValueAcceptedWhenLatin1OptionIsConfigured()
         {
             var testContext = new TestServiceContext(LoggerFactory);

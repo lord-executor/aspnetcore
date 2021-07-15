@@ -627,7 +627,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
             // Reset Http1 Features
             _currentIHttpMinRequestBodyDataRateFeature = this;
             _currentIHttpMinResponseDataRateFeature = this;
-            _currentIPersistentStateFeature = ConnectionFeatures.Get<IPersistentStateFeature>();
         }
 
         protected override void OnRequestProcessingEnding()
