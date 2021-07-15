@@ -14,10 +14,11 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2
     internal partial class Http2Stream : IHttp2StreamIdFeature,
                                          IHttpMinRequestBodyDataRateFeature,
                                          IHttpResetFeature,
-                                         IHttpResponseTrailersFeature
-
+                                         IHttpResponseTrailersFeature,
+                                         IPersistentStateFeature
     {
         private IHeaderDictionary? _userTrailers;
+        private IDictionary<object, object?>? _persistentState;
 
         IHeaderDictionary IHttpResponseTrailersFeature.Trailers
         {
@@ -64,6 +65,15 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2
         {
             var abortReason = new ConnectionAbortedException(CoreStrings.FormatHttp2StreamResetByApplication((Http2ErrorCode)errorCode));
             ApplicationAbort(abortReason, (Http2ErrorCode)errorCode);
+        }
+
+        IDictionary<object, object?> IPersistentStateFeature.State
+        {
+            get
+            {
+                // Lazily allocate persistent state
+                return _persistentState ?? (_persistentState = new ConnectionItems());
+            }
         }
     }
 }

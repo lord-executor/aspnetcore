@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2;
@@ -304,9 +305,18 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Tests
         public async Task StreamPool_MultipleStreamsInSequence_PooledStreamReused()
         {
             TaskCompletionSource appDelegateTcs = null;
+            object persistetedState = null;
+            int requestCount = 0;
 
             await InitializeConnectionAsync(async context =>
             {
+                requestCount++;
+                var persistentStateCollection = context.Features.Get<IPersistentStateFeature>().State;
+                if (persistentStateCollection.TryGetValue("Counter", out var value))
+                {
+                    persistetedState = value;
+                }
+                persistentStateCollection["Counter"] = requestCount;
                 await appDelegateTcs.Task;
             });
 
@@ -330,6 +340,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Tests
             Assert.True(_connection.StreamPool.TryPeek(out var pooledStream));
             Assert.Equal(stream, pooledStream);
 
+            Assert.Null(persistetedState);
+
             appDelegateTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             await StartStreamAsync(3, _browserRequestHeaders, endStream: true);
 
@@ -347,6 +359,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Tests
             await PingUntilStreamPooled(expectedCount: 1).DefaultTimeout();
             Assert.True(_connection.StreamPool.TryPeek(out pooledStream));
             Assert.Equal(stream, pooledStream);
+
+            Assert.Equal(1, (int)persistetedState);
 
             await StopConnectionAsync(expectedLastStreamId: 3, ignoreNonGoAwayFrames: false);
 

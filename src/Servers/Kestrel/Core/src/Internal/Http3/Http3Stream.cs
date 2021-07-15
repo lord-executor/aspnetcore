@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Connections.Features;
 using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure;
 using Microsoft.Extensions.Logging;
@@ -628,6 +629,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http3
             _currentIHttpMinRequestBodyDataRateFeature = this;
             _currentIHttpResponseTrailersFeature = this;
             _currentIHttpResetFeature = this;
+            _currentIPersistentStateFeature = ConnectionFeatures.Get<IPersistentStateFeature>();
         }
 
         protected override void ApplicationAbort() => ApplicationAbort(new ConnectionAbortedException(CoreStrings.ConnectionAbortedByApplication), Http3ErrorCode.InternalError);
